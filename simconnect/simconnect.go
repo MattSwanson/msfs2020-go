@@ -27,6 +27,7 @@ var proc_SimConnect_SubscribeToFacilities *syscall.LazyProc
 var proc_SimConnect_UnsubscribeToFacilities *syscall.LazyProc
 var proc_SimConnect_RequestFacilitiesList *syscall.LazyProc
 var proc_SimConnect_MapClientEventToSimEvent *syscall.LazyProc
+var proc_SimConnect_TransmitClientEvent *syscall.LazyProc
 var proc_SimConnect_MenuAddItem *syscall.LazyProc
 var proc_SimConnect_MenuDeleteItem *syscall.LazyProc
 var proc_SimConnect_AddClientEventToNotificationGroup *syscall.LazyProc
@@ -77,6 +78,7 @@ func New(name string) (*SimConnect, error) {
 		proc_SimConnect_UnsubscribeToFacilities = mod.NewProc("SimConnect_UnsubscribeToFacilities")
 		proc_SimConnect_RequestFacilitiesList = mod.NewProc("SimConnect_RequestFacilitiesList")
 		proc_SimConnect_MapClientEventToSimEvent = mod.NewProc("SimConnect_MapClientEventToSimEvent")
+		proc_SimConnect_TransmitClientEvent = mod.NewProc("SimConnect_TransmitClientEvent")
 		proc_SimConnect_MenuAddItem = mod.NewProc("SimConnect_MenuAddItem")
 		proc_SimConnect_MenuDeleteItem = mod.NewProc("SimConnect_MenuDeleteItem")
 		proc_SimConnect_AddClientEventToNotificationGroup = mod.NewProc("SimConnect_AddClientEventToNotificationGroup")
@@ -414,6 +416,36 @@ func (s *SimConnect) MapClientEventToSimEvent(eventID DWORD, eventName string) e
 		return fmt.Errorf(
 			"SimConnect_MapClientEventToSimEvent for eventID %d error: %d %s",
 			eventID, r1, err,
+		)
+	}
+
+	return nil
+}
+
+func (s *SimConnect) TransmitClientID(eventID DWORD, data DWORD) error {
+	// SimConnect_TransmitClientEvent(
+	// 	HANDLE  hSimConnect,
+	// 	SIMCONNECT_OBJECT_ID  ObjectID,
+	// 	SIMCONNECT_CLIENT_EVENT_ID  EventID,
+	// 	DWORD  dwData,
+	// 	SIMCONNECT_NOTIFICATION_GROUP_ID  GroupID,
+	// 	SIMCONNECT_EVENT_FLAG  Flags
+	// );
+
+	args := []uintptr{
+		uintptr(s.handle),
+		uintptr(OBJECT_ID_USER),
+		uintptr(eventID),
+		uintptr(data),
+		uintptr(GROUP_PRIORITY_HIGHEST),
+		uintptr(SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY),
+	}
+
+	r1, _, err := proc_SimConnect_TransmitClientEvent.Call(args...)
+	if int32(r1) < 0 {
+		return fmt.Errorf(
+			"SimConnect_TransmitClientEvent for eventID %d and data %d error: %d %s",
+			eventID, data, r1, err,
 		)
 	}
 
